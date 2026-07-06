@@ -8,7 +8,7 @@ import KitchenLogin from '../kitchen/KitchenLogin';
 import DeliveryLogin from '../delivery/DeliveryLogin';
 import { useTheme } from '../../contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
+import {
   Person as PersonIcon,
   ShoppingCart as CartIcon,
   Restaurant as RestaurantIcon,
@@ -22,7 +22,7 @@ const ClientHeader = ({ onMenuToggle }) => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
   const { totalItems } = useCart();
-  const { theme } = useTheme();
+  const { theme, toggleTheme} = useTheme();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showKitchenLogin, setShowKitchenLogin] = useState(false);
   const [showDeliveryLogin, setShowDeliveryLogin] = useState(false);
@@ -119,22 +119,45 @@ const ClientHeader = ({ onMenuToggle }) => {
           margin: '0 auto',
         }}>
           {/* Logo com Imagem */}
-<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-  <img 
-    src={logo} // ou importe a imagem: 
-    alt="Delivery Food"
-    style={{
-      height: '40px',
-      width: 'auto',
-      cursor: 'pointer',
-      objectFit: 'contain',
-    }}
-    onClick={() => navigate('/')}
-  />
-</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <img
+              src={logo} // ou importe a imagem: 
+              alt="Delivery Food"
+              style={{
+                height: '40px',
+                width: 'auto',
+                cursor: 'pointer',
+                objectFit: 'contain',
+              }}
+              onClick={() => navigate('/')}
+            />
+          </div>
 
           {/* Right Actions */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            
+            {/* Botão de Troca de Tema */}
+<button
+  onClick={toggleTheme}
+  style={{
+    background: glass.iconBg,
+    border: `1px solid ${glass.iconBorder}`,
+    borderRadius: '50%',
+    width: '36px',
+    height: '36px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    color: glass.textSecondary,
+    transition: 'all 0.3s ease',
+    backdropFilter: 'blur(10px)',
+  }}
+  title="Alternar tema"
+>
+  {theme === 'dark' ? '☀️' : '🌙'}
+</button>
+            
             {/* Profile com Long Press */}
             <button
               onClick={handleProfileClick}
@@ -226,9 +249,9 @@ const ClientHeader = ({ onMenuToggle }) => {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ 
-                type: 'spring', 
-                damping: 25, 
+              transition={{
+                type: 'spring',
+                damping: 25,
                 stiffness: 300,
               }}
               style={{
@@ -310,8 +333,8 @@ const ClientHeader = ({ onMenuToggle }) => {
                     padding: '12px 16px',
                     borderRadius: '10px',
                     border: 'none',
-                    background: selectedRole === 'delivery' 
-                      ? 'linear-gradient(135deg, hsl(225, 95%, 56%), hsl(225, 80%, 40%))' 
+                    background: selectedRole === 'delivery'
+                      ? 'linear-gradient(135deg, hsl(225, 95%, 56%), hsl(225, 80%, 40%))'
                       : 'transparent',
                     color: selectedRole === 'delivery' ? 'white' : glass.textSecondary,
                     cursor: 'pointer',
@@ -333,8 +356,8 @@ const ClientHeader = ({ onMenuToggle }) => {
                     padding: '12px 16px',
                     borderRadius: '10px',
                     border: 'none',
-                    background: selectedRole === 'kitchen' 
-                      ? 'linear-gradient(135deg, hsl(225, 95%, 56%), hsl(225, 80%, 40%))' 
+                    background: selectedRole === 'kitchen'
+                      ? 'linear-gradient(135deg, hsl(225, 95%, 56%), hsl(225, 80%, 40%))'
                       : 'transparent',
                     color: selectedRole === 'kitchen' ? 'white' : glass.textSecondary,
                     cursor: 'pointer',
@@ -382,19 +405,19 @@ const ClientHeader = ({ onMenuToggle }) => {
       </AnimatePresence>
 
       {/* Modals */}
-      <LoginModal 
-        isOpen={showLoginModal} 
+      <LoginModal
+        isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
         onSuccess={() => setShowLoginModal(false)}
       />
-      
-      <KitchenLogin 
-        isOpen={showKitchenLogin} 
+
+      <KitchenLogin
+        isOpen={showKitchenLogin}
         onClose={() => setShowKitchenLogin(false)}
       />
-      
-      <DeliveryLogin 
-        isOpen={showDeliveryLogin} 
+
+      <DeliveryLogin
+        isOpen={showDeliveryLogin}
         onClose={() => setShowDeliveryLogin(false)}
       />
     </>

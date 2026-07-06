@@ -176,7 +176,7 @@ const handleSubmit = () => {
                   fontSize: '1.2rem', 
                   fontWeight: 700, 
                   color: 'var(--secondary)' 
-                }}>
+                }}> 
                   {new Intl.NumberFormat('pt-MZ', {
                     style: 'currency',
                     currency: 'MZN',

@@ -113,7 +113,7 @@ const InPersonPayment = ({ onSubmit, order, loading }) => {
                     minimumFractionDigits: 0,
                   }).format(order.deliveryFee)}
                 </span>
-              </div>
+              </div> 
             )}
             <div style={{
               display: 'flex',

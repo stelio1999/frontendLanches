@@ -76,6 +76,19 @@ const CartModal = ({ onProceed, onClose }) => {
     }
   };
 
+  // Função para calcular a distância entre duas coordenadas (em KM)
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // Raio da Terra em km
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Distância em km
+  };
+
   if (items.length === 0) {
     return (
       <div style={{
@@ -620,12 +633,22 @@ const CartModal = ({ onProceed, onClose }) => {
 
 
       <LocationPickerModal
-  isOpen={showLocationModal}
-  onClose={() => setShowLocationModal(false)}
-  onConfirm={(location) => {
-    setDeliveryLocation(location);
-  }}
-/>
+        isOpen={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
+        onConfirm={(location) => {
+
+          const storeLat = -25.9688;
+          const storeLng = 32.5855;
+
+          const dist = calculateDistance(storeLat, storeLng, location.lat, location.lng);
+
+          // Regra: <= 2km gratis, > 2km 10 MZN por km
+          const fee = dist <= 2 ? 0 : Math.round(dist * 10);
+
+          setDeliveryLocation(location);
+          setDeliveryFee(fee);
+        }}
+      />
     </div>
   );
 };

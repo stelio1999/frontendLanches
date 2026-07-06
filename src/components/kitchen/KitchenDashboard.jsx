@@ -8,7 +8,7 @@ import AnimatedButton from '../common/AnimatedButton';
 import api from '../../services/api';
 import { useSocket } from '../../hooks/useSocket';
 import toast from 'react-hot-toast';
-import { 
+import {
   Restaurant as RestaurantIcon,
   CheckCircle as CheckIcon,
   Pending as PendingIcon,
@@ -37,7 +37,7 @@ const KitchenDashboard = ({ onOrderClick }) => {
 
   useEffect(() => {
     fetchOrders();
-    
+
     // Listen for new orders
     const handleNewOrder = (data) => {
       toast.success(`🆕 Novo pedido #${data.orderNumber} recebido`);
@@ -79,10 +79,10 @@ const KitchenDashboard = ({ onOrderClick }) => {
       const response = await api.get('/orders/kitchen?status=all');
       if (response.data.success) {
         const allOrders = response.data.data;
-        const activeOrders = allOrders.filter(o => 
+        const activeOrders = allOrders.filter(o =>
           !['delivered', 'cancelled'].includes(o.status)
         );
-        const sortedOrders = activeOrders.sort((a, b) => 
+        const sortedOrders = activeOrders.sort((a, b) =>
           new Date(a.created_at) - new Date(b.created_at)
         );
         setOrders(sortedOrders);
@@ -127,28 +127,28 @@ const KitchenDashboard = ({ onOrderClick }) => {
 
   // Dentro do componente KitchenDashboard, atualizar a função handleOpenPayment
 
-const handleOpenPayment = async (order) => {
-  setSelectedOrder(order);
-  setShowPaymentModal(true);
-  setLoadingPayment(true);
-  
-  try {
-    // CORRIGIDO: Usar a nova rota /payments/order/:orderId
-    const response = await api.get(`/payments/order/${order.id}`);
-    if (response.data.success) {
-      setPaymentDetails(response.data.data);
+  const handleOpenPayment = async (order) => {
+    setSelectedOrder(order);
+    setShowPaymentModal(true);
+    setLoadingPayment(true);
+
+    try {
+      // CORRIGIDO: Usar a nova rota /payments/order/:orderId
+      const response = await api.get(`/payments/order/${order.id}`);
+      if (response.data.success) {
+        setPaymentDetails(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching payment:', error);
+      if (error.response?.status === 404) {
+        toast.info('Nenhum pagamento encontrado para este pedido');
+      } else {
+        toast.error('Erro ao carregar detalhes do pagamento');
+      }
+    } finally {
+      setLoadingPayment(false);
     }
-  } catch (error) {
-    console.error('Error fetching payment:', error);
-    if (error.response?.status === 404) {
-      toast.info('Nenhum pagamento encontrado para este pedido');
-    } else {
-      toast.error('Erro ao carregar detalhes do pagamento');
-    }
-  } finally {
-    setLoadingPayment(false);
-  }
-};
+  };
 
   const handleClosePayment = () => {
     setShowPaymentModal(false);
@@ -183,7 +183,7 @@ const handleOpenPayment = async (order) => {
   };
 
   const getNextStatus = (currentStatus) => {
-    const steps = ['received', 'preparing', 'ready'];
+    const steps = ['received', 'preparing', 'ready', 'sent', 'delivered'];
     const currentIndex = steps.indexOf(currentStatus);
     return currentIndex < steps.length - 1 ? steps[currentIndex + 1] : null;
   };
@@ -307,7 +307,7 @@ const handleOpenPayment = async (order) => {
             const statusInfo = getStatusInfo(order.status);
             const nextStatus = getNextStatus(order.status);
             const prevStatus = getPreviousStatus(order.status);
-            
+
             return (
               <motion.div
                 key={order.id}
@@ -373,19 +373,21 @@ const handleOpenPayment = async (order) => {
                   }}>
                     {/* Botão para avançar status */}
                     {nextStatus && order.status !== 'payment_verification' && (
-  <AnimatedButton
-    variant="primary"
-    size="small"
-    onClick={() => handleStatusUpdate(order.id, nextStatus)}
-    icon={<CheckIcon />}
-    style={{ flex: 1 }}
-  >
-    {nextStatus === 'preparing' ? 'Iniciar Preparo' :
-     nextStatus === 'ready' ? 'Marcar Pronto' :
-     `Avançar para ${getStatusInfo(nextStatus).label}`}
-  </AnimatedButton>
-)}
-                    
+                      <AnimatedButton
+                        variant="primary"
+                        size="small"
+                        onClick={() => handleStatusUpdate(order.id, nextStatus)}
+                        icon={<CheckIcon />}
+                        style={{ flex: 1 }}
+                      >
+                        {order.status === 'ready' ? 'Marcar como Em Rota' :
+                          order.status === 'sent' ? 'Confirmar Entrega' :
+                            nextStatus === 'preparing' ? 'Iniciar Preparo' :
+                              nextStatus === 'ready' ? 'Marcar Pronto' :
+                                `Avançar para ${getStatusInfo(nextStatus).label}`}
+                      </AnimatedButton>
+                    )}
+
                     {/* Botão para voltar status */}
                     {prevStatus && order.status !== 'received' && (
                       <AnimatedButton
@@ -637,9 +639,9 @@ const handleOpenPayment = async (order) => {
                           {item.quantity}x {item.product_name || item.title}
                         </span>
                         {item.observations && (
-                          <span style={{ 
-                            fontSize: '0.75rem', 
-                            color: 'var(--text-secondary)', 
+                          <span style={{
+                            fontSize: '0.75rem',
+                            color: 'var(--text-secondary)',
                             display: 'block',
                             fontStyle: 'italic',
                           }}>
@@ -837,8 +839,8 @@ const handleOpenPayment = async (order) => {
                         <span style={{ fontWeight: 500 }}>Método</span>
                         <span style={{ fontWeight: 600 }}>
                           {paymentDetails.method === 'bank_transfer' ? 'Transferência Bancária' :
-                           paymentDetails.method === 'mobile_transfer' ? 'Transferência Móvel' :
-                           'Pagamento Presencial'}
+                            paymentDetails.method === 'mobile_transfer' ? 'Transferência Móvel' :
+                              'Pagamento Presencial'}
                         </span>
                       </div>
                       <div style={{
@@ -866,18 +868,18 @@ const handleOpenPayment = async (order) => {
                           padding: '2px 12px',
                           borderRadius: 'var(--radius-full)',
                           background: paymentDetails.status === 'approved' ? 'var(--success)20' :
-                                   paymentDetails.status === 'rejected' ? 'var(--error)20' :
-                                   'var(--warning)20',
+                            paymentDetails.status === 'rejected' ? 'var(--error)20' :
+                              'var(--warning)20',
                           color: paymentDetails.status === 'approved' ? 'var(--success)' :
-                                 paymentDetails.status === 'rejected' ? 'var(--error)' :
-                                 'var(--warning)',
+                            paymentDetails.status === 'rejected' ? 'var(--error)' :
+                              'var(--warning)',
                           fontWeight: 600,
                           fontSize: '0.85rem',
                         }}>
                           {paymentDetails.status === 'approved' ? '✅ Aprovado' :
-                           paymentDetails.status === 'rejected' ? '❌ Rejeitado' :
-                           paymentDetails.status === 'pending_verification' ? '⏳ Em Verificação' :
-                           '⏳ Pendente'}
+                            paymentDetails.status === 'rejected' ? '❌ Rejeitado' :
+                              paymentDetails.status === 'pending_verification' ? '⏳ Em Verificação' :
+                                '⏳ Pendente'}
                         </span>
                       </div>
                       {paymentDetails.reference && (

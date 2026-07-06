@@ -45,12 +45,7 @@ const ProfileScreen = () => {
       onClick: () => navigate('/orders'),
       color: 'var(--secondary)'
     },
-    { 
-      icon: <HistoryIcon />, 
-      label: 'Histórico', 
-      onClick: () => navigate('/orders'),
-      color: 'var(--info)'
-    },
+    
     { 
       icon: theme === 'light' ? <DarkModeIcon /> : <LightModeIcon />,
       label: theme === 'light' ? 'Modo Escuro' : 'Modo Claro',
@@ -319,9 +314,9 @@ const ProfileScreen = () => {
         fontSize: '0.75rem',
         borderTop: '1px solid var(--border)',
       }}>
-        <p>Delivery Food v1.0.0</p>
+        <p>Desenvolvido por Stelio Bobo</p>
         <p style={{ marginTop: 'var(--spacing-xs)' }}>
-          © 2024 Delivery Food - Moçambique
+          © 2026 Delivery Food - Moçambique
         </p>
       </div>
 

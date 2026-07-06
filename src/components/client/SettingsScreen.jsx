@@ -362,9 +362,9 @@ const SettingsScreen = () => {
         fontSize: '0.75rem',
         opacity: 0.5,
       }}>
-        <p>Delivery Food v1.0.0</p>
+        <p>Desenvolvido por Stelio Bobo</p>
         <p style={{ marginTop: 'var(--spacing-xs)' }}>
-          © 2024 Delivery Food - Moçambique
+          © 2026 Delivery Food - Moçambique
         </p>
       </div>
 

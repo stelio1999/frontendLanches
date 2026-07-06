@@ -1,6 +1,6 @@
 // src/components/shared/QRCode.jsx
 import React from 'react';
-import  QRCodeSVG  from 'react-qr-code';
+import QRCodeSVG from 'react-qr-code';
 import GlassCard from '../common/GlassCard';
 
 const QRCode = ({ value, size = 200, label, showLabel = true, className = '' }) => {
@@ -19,7 +19,7 @@ const QRCode = ({ value, size = 200, label, showLabel = true, className = '' }) 
   }
 
   return (
-    <GlassCard style={{ 
+    <GlassCard style={{
       textAlign: 'center',
       padding: 'var(--spacing-lg)',
       display: 'flex',
@@ -34,15 +34,15 @@ const QRCode = ({ value, size = 200, label, showLabel = true, className = '' }) 
         borderRadius: 'var(--radius-md)',
         boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
       }}>
-        <QRCodeSVG
-          className={`qr-code-svg ${className}`}
-          value={value}
-          size={size}
-          bgColor="#ffffff"
-          fgColor="#1a237e"
-          level="H"
-          includeMargin={true}
-        />
+        <div style={{ padding: '10px' }}>
+          <QRCodeSVG
+            className={`qr-code-svg ${className}`}
+            value={value}
+            size={size}
+            bgColor="#ffffff"
+            fgColor="#1a237e"
+            level="H"
+          /></div>
       </div>
       {showLabel && label && (
         <p style={{
