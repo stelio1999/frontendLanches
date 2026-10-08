@@ -28,10 +28,13 @@ const KitchenLogin = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (attempts >= 3) {
       setIsLocked(true);
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         setIsLocked(false);
         setAttempts(0);
+        toast.dismiss();
       }, 30000);
+      
+      return () => clearTimeout(timer);
     }
   }, [attempts]);
 
@@ -39,33 +42,84 @@ const KitchenLogin = ({ isOpen, onClose }) => {
     e.preventDefault();
     
     if (isLocked) {
-      toast.error('Conta temporariamente bloqueada. Aguarde 30 segundos.');
+      toast.error('Conta temporariamente bloqueada. Aguarde 30 segundos.', {
+        duration: 4000,
+      });
       return;
     }
 
+    // Validação de campos
     if (!email || !password) {
-      toast.error('Preencha todos os campos');
+      toast.error('Preencha todos os campos', {
+        duration: 3000,
+      });
       return;
     }
 
     setLoading(true);
+    
+    // Fechar toasts anteriores
+    toast.dismiss();
+
     try {
       const result = await loginWithPassword(email, password);
+      
       if (result.success) {
+        // Verificar se é realmente um usuário da cozinha
         if (result.user.userType !== 'kitchen') {
-          toast.error('Acesso negado. Esta conta não é da cozinha.');
+          toast.error('Acesso negado. Esta conta não é da cozinha.', {
+            duration: 4000,
+            icon: '🚫',
+          });
           return;
         }
-        toast.success('Login realizado com sucesso!');
+        
+        toast.success('Login realizado com sucesso!', {
+          duration: 2000,
+          icon: '👨‍🍳',
+        });
+        
+        // Limpar campos
+        setEmail('');
+        setPassword('');
+        
         onClose && onClose();
         navigate('/kitchen');
       } else {
+        // Mostrar erro no toast
         setAttempts(prev => prev + 1);
-        toast.error(result.error || 'Credenciais inválidas');
+        
+        const errorMessage = result.error || 'Credenciais inválidas';
+        
+        // Toast de erro principal
+        toast.error(errorMessage, {
+          duration: 4000,
+          icon: '❌',
+          style: {
+            background: '#FEE2E2',
+            color: '#991B1B',
+            border: '1px solid #FCA5A5',
+          },
+        });
+        
+        // Aviso de tentativas restantes
+        const remainingAttempts = 3 - (attempts + 1);
+        if (remainingAttempts > 0 && remainingAttempts <= 2) {
+          setTimeout(() => {
+            toast.error(`⚠️ Restam ${remainingAttempts} tentativa(s) antes do bloqueio`, {
+              duration: 4000,
+            });
+          }, 100);
+        }
       }
     } catch (error) {
+      console.error('Erro no login:', error);
       setAttempts(prev => prev + 1);
-      toast.error('Erro ao fazer login');
+      
+      toast.error('Erro inesperado ao fazer login. Tente novamente.', {
+        duration: 4000,
+        icon: '⚠️',
+      });
     } finally {
       setLoading(false);
     }

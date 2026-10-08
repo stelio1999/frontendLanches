@@ -27,7 +27,7 @@ const ClientHeader = ({ onMenuToggle }) => {
   const [showKitchenLogin, setShowKitchenLogin] = useState(false);
   const [showDeliveryLogin, setShowDeliveryLogin] = useState(false);
   const [showRoleModal, setShowRoleModal] = useState(false);
-  const [selectedRole, setSelectedRole] = useState('delivery'); // 'delivery' ou 'kitchen'
+  const [selectedRole, setSelectedRole] = useState('kitchen'); // 'delivery' ou 'kitchen'
   const [longPressTimer, setLongPressTimer] = useState(null);
 
   // Cores do tema para efeito de vidro

@@ -23,7 +23,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import SettingsScreen from '../components/client/SettingsScreen';
 const ClientApp = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user,isAuthenticated, loading } = useAuth();
   const { totalItems } = useCart();
   const { on, off } = useSocket();
   const { theme } = useTheme();
@@ -57,6 +57,18 @@ const ClientApp = () => {
 
   const glass = theme === 'dark' ? glassColors.dark : glassColors.light;
 
+
+  useEffect(() => {
+    if (!loading && isAuthenticated && user?.userType !== 'client') {
+      if (user.userType === 'kitchen') {
+        navigate('/kitchen', { replace: true });
+      } else if (user.userType === 'delivery') {
+        navigate('/delivery', { replace: true });
+      }
+    }
+  }, [isAuthenticated, user, loading, navigate]);
+
+  
   useEffect(() => {
     // Listen for order status updates
     const handleOrderUpdate = (data) => {

@@ -14,10 +14,17 @@ import toast from 'react-hot-toast';
 
 const KitchenApp = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
   const { on, off } = useSocket();
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showOrderDetail, setShowOrderDetail] = useState(false);
+
+  // Proteção extra: verificar se o usuário é realmente da cozinha
+  useEffect(() => {
+    if (!loading && (!isAuthenticated || user?.userType !== 'kitchen')) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, user, loading, navigate]);
 
   useEffect(() => {
     const handleNewOrder = (data) => {
@@ -36,6 +43,16 @@ const KitchenApp = () => {
       off('payment_proof_submitted', handlePaymentProof);
     };
   }, [on, off]);
+
+  // Enquanto estiver carregando, não renderizar
+  if (loading) {
+    return null;
+  }
+
+  // Se não for kitchen, não renderizar
+  if (!isAuthenticated || user?.userType !== 'kitchen') {
+    return null;
+  }
 
   const handleOrderClick = (order) => {
     setSelectedOrder(order);

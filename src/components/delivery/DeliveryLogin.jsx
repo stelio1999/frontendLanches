@@ -35,41 +35,85 @@ const DeliveryLogin = ({ isOpen, onClose }) => {
     }
   }, [attempts]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // src/components/delivery/DeliveryLogin.jsx
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  
+  if (isLocked) {
+    toast.error('Conta temporariamente bloqueada. Aguarde 30 segundos.', {
+      duration: 4000,
+    });
+    return;
+  }
+
+  if (!email || !password) {
+    toast.error('Preencha todos os campos', {
+      duration: 3000,
+    });
+    return;
+  }
+
+  setLoading(true);
+  toast.dismiss();
+
+  try {
+    const result = await loginWithPassword(email, password);
     
-    if (isLocked) {
-      toast.error('Conta temporariamente bloqueada. Aguarde 30 segundos.');
-      return;
-    }
-
-    if (!email || !password) {
-      toast.error('Preencha todos os campos');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const result = await loginWithPassword(email, password);
-      if (result.success) {
-        if (result.user.userType !== 'delivery') {
-          toast.error('Acesso negado. Esta conta não é de delivery.');
-          return;
-        }
-        toast.success('Login realizado com sucesso!');
-        onClose && onClose();
-        navigate('/delivery');
-      } else {
-        setAttempts(prev => prev + 1);
-        toast.error(result.error || 'Credenciais inválidas');
+    if (result.success) {
+      if (result.user.userType !== 'delivery') {
+        toast.error('Acesso negado. Esta conta não é de delivery.', {
+          duration: 4000,
+          icon: '🚫',
+        });
+        return;
       }
-    } catch (error) {
+      
+      toast.success('Login realizado com sucesso!', {
+        duration: 2000,
+        icon: '🚚',
+      });
+      
+      setEmail('');
+      setPassword('');
+      
+      onClose && onClose();
+      navigate('/delivery');
+    } else {
       setAttempts(prev => prev + 1);
-      toast.error('Erro ao fazer login');
-    } finally {
-      setLoading(false);
+      
+      const errorMessage = result.error || 'Credenciais inválidas';
+      
+      toast.error(errorMessage, {
+        duration: 4000,
+        icon: '❌',
+        style: {
+          background: '#FEE2E2',
+          color: '#991B1B',
+          border: '1px solid #FCA5A5',
+        },
+      });
+      
+      const remainingAttempts = 3 - (attempts + 1);
+      if (remainingAttempts > 0 && remainingAttempts <= 2) {
+        setTimeout(() => {
+          toast.error(`⚠️ Restam ${remainingAttempts} tentativa(s) antes do bloqueio`, {
+            duration: 4000,
+          });
+        }, 100);
+      }
     }
-  };
+  } catch (error) {
+    console.error('Erro no login:', error);
+    setAttempts(prev => prev + 1);
+    
+    toast.error('Erro inesperado ao fazer login. Tente novamente.', {
+      duration: 4000,
+      icon: '⚠️',
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   if (!isOpen) return null;
 

@@ -13,12 +13,18 @@ import toast from 'react-hot-toast';
 
 const DeliveryApp = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
   const { on, off, emit } = useSocket();
   const [currentLocation, setCurrentLocation] = useState(null);
 
+  // Proteção extra: verificar se o usuário é realmente do delivery
   useEffect(() => {
-    // Watch location
+    if (!loading && (!isAuthenticated || user?.userType !== 'delivery')) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, user, loading, navigate]);
+
+  useEffect(() => {
     if (navigator.geolocation) {
       const watchId = navigator.geolocation.watchPosition(
         (position) => {
@@ -53,6 +59,16 @@ const DeliveryApp = () => {
       off('new_order_available', handleNewOrder);
     };
   }, [on, off]);
+
+  // Enquanto estiver carregando, não renderizar
+  if (loading) {
+    return null;
+  }
+
+  // Se não for delivery, não renderizar
+  if (!isAuthenticated || user?.userType !== 'delivery') {
+    return null;
+  }
 
   return (
     <div className="app-container" style={{ paddingBottom: '80px' }}>

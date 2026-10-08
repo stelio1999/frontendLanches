@@ -155,6 +155,7 @@ const LoginModal = ({ isOpen, onClose, onSuccess }) => {
             </div>
 
             {/* Mode Toggle */}
+      {/*  
             <div style={{
               display: 'flex',
               gap: 'var(--spacing-sm)',
@@ -199,13 +200,14 @@ const LoginModal = ({ isOpen, onClose, onSuccess }) => {
                   fontWeight: mode === 'password' ? 600 : 400,
                   transition: 'all var(--transition-normal)',
                   fontSize: '0.85rem',
+                  
                 }}
               >
                 <LockIcon style={{ fontSize: 16, marginRight: 'var(--spacing-xs)' }} />
                 Senha
               </button>
             </div>
-
+*/}
             {mode === 'phone' ? (
               <form onSubmit={handlePhoneLogin}>
                 <div style={{ marginBottom: 'var(--spacing-md)' }}>
@@ -413,20 +415,7 @@ const LoginModal = ({ isOpen, onClose, onSuccess }) => {
               Ao entrar, você concorda com os termos de uso
             </p>
 
-            <div style={{
-              marginTop: 'var(--spacing-md)',
-              padding: 'var(--spacing-sm)',
-              background: 'var(--glass-bg)',
-              borderRadius: 'var(--radius-md)',
-              textAlign: 'center',
-            }}>
-              <p style={{
-                fontSize: '0.8rem',
-                color: 'var(--text-secondary)',
-              }}>
-                <strong>Clientes:</strong> Use o login com telefone para acesso rápido
-              </p>
-            </div>
+            
           </motion.div>
         </motion.div>
       )}

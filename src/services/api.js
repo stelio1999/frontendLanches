@@ -1,4 +1,4 @@
-// src/services/api.js//
+// src/services/api.js
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://backendlanches.onrender.com';
@@ -8,7 +8,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000,
+  timeout: 20000,
 });
 
 // Interceptor para adicionar token
@@ -29,11 +29,32 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/';
+    const status = error.response?.status;
+    const url = error.config?.url || '';
+    
+    // NÃO redirecionar se for rota de autenticação
+    const isAuthRoute = 
+      url.includes('/auth/login') ||
+      url.includes('/auth/register') ||
+      url.includes('/auth/login/phone') ||
+      url.includes('/auth/verify') ||
+      url.includes('/auth/send-verification-code');
+    
+    // Só fazer logout/redirect se:
+    // - for 401
+    // - NÃO for rota de login
+    // - JÁ tiver token armazenado (indica sessão expirada)
+    if (status === 401 && !isAuthRoute) {
+      const hasToken = !!localStorage.getItem('token');
+      
+      if (hasToken) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        delete api.defaults.headers.common['Authorization'];
+        window.location.href = '/';
+      }
     }
+    
     return Promise.reject(error);
   }
 );

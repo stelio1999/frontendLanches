@@ -157,9 +157,19 @@ const ProductManagement = () => {
         handleCloseModal();
       }
     } catch (error) {
-      console.error('Erro detalhado:', error.response?.data);
-      toast.error('Erro ao salvar produto');
-    } finally {
+  console.error('ERRO COMPLETO:', error);
+  console.error('Status:', error.response?.status);
+  console.error('Data:', error.response?.data);
+  console.error('Headers:', error.response?.headers);
+  console.error('Message:', error.message);
+
+  toast.error(
+    error.response?.data?.error ||
+    error.response?.data?.message ||
+    error.message ||
+    'Erro ao salvar produto'
+  );
+} finally {
       setLoading(false);
     }
   };
