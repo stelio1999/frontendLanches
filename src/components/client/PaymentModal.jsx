@@ -7,6 +7,7 @@ import BankTransfer from './BankTransfer';
 import MobileTransfer from './MobileTransfer';
 import InPersonPayment from './InPersonPayment';
 import api from '../../services/api';
+import WhatsAppService from '../../services/whatsapp';
 import { useCart } from '../../hooks/useCart';
 import { useAuth } from '../../hooks/useAuth';
 import toast from 'react-hot-toast';
@@ -17,10 +18,9 @@ import {
   CheckCircle as CheckIcon,
   Close as CloseIcon,
   ArrowBack as ArrowBackIcon,
-  CreditCard as CreditCardIcon,
-  Security as SecurityIcon
+  Security as SecurityIcon,
+  WhatsApp as WhatsAppIcon
 } from '@mui/icons-material';
-
 
 const PaymentModal = ({ order, onComplete, onClose }) => {
   const { clearCart } = useCart();
@@ -29,6 +29,7 @@ const PaymentModal = ({ order, onComplete, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [paymentData, setPaymentData] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [whatsappSent, setWhatsappSent] = useState(false);
 
   const paymentMethods = [
     { 
@@ -60,43 +61,75 @@ const PaymentModal = ({ order, onComplete, onClose }) => {
     setShowConfirmation(false);
   };
 
+  // ✅ ENVIAR PARA WHATSAPP
+  const sendToWhatsApp = (createdOrder, payment) => {
+    try {
+      const success = WhatsAppService.sendToWhatsApp(
+        createdOrder,
+        payment,
+        user
+      );
+      
+      if (success) {
+        setWhatsappSent(true);
+        toast.success('Pedido enviado para a cozinha!', {
+          icon: '📱',
+          duration: 3000,
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao enviar para WhatsApp:', error);
+      toast.error('Não foi possível enviar para WhatsApp');
+    }
+  };
+
+  // ✅ SUBMETER PEDIDO + COMPROVATIVO + WHATSAPP - TUDO DE UMA VEZ
   const handlePaymentSubmit = async (data) => {
     setLoading(true);
     try {
+      // 1. Criar pedido
       const response = await api.post('/orders', {
         items: order.items,
         totalAmount: order.totalAmount,
         deliveryFee: order.deliveryFee || 0,
         isDelivery: order.isDelivery || false,
         deliveryAddress: order.deliveryAddress || null,
-
-         deliveryLat: order.deliveryLat ?? null,
-  deliveryLng: order.deliveryLng ?? null,
-
         paymentMethod: selectedMethod,
-        ...data
+        // ✅ Incluir comprovativo na criação do pedido
+        proof: data.proof || null,
+        proofImage: data.proofImage || null,
+        proofType: data.proofType || null,
+        bankAccount: data.bankAccount || null,
+        mobileWallet: data.mobileWallet || null,
       });
 
       if (response.data.success) {
         const { order: createdOrder, payment } = response.data.data;
+        
         console.log('📦 Pedido criado:', createdOrder);
-        console.log('💳 Pagamento criado:', payment);
+        console.log('💳 Pagamento:', payment);
         
         setPaymentData({ 
           order: createdOrder, 
           payment: payment 
         });
         
-        // Se for pagamento presencial, não precisa de comprovativo
-        if (selectedMethod === 'in_person') {
+        // 2. Se for pagamento presencial ou já tem comprovativo, finaliza
+        if (selectedMethod === 'in_person' || data.proof || data.proofImage) {
+          // ✅ 3. Enviar para WhatsApp após 1.5 segundos
+          setTimeout(() => {
+            sendToWhatsApp(createdOrder, payment);
+          }, 1500);
+          
           setShowConfirmation(true);
-          toast.success('Pedido realizado com sucesso!');
           clearCart();
+          
           setTimeout(() => {
             onComplete && onComplete(createdOrder);
-          }, 2000);
+          }, 4000);
         } else {
-          toast.success('Pedido criado! Envie o comprovativo de pagamento.');
+          // Precisa de comprovativo
+          toast.success('Pedido criado! Envie o comprovativo.');
         }
       }
     } catch (error) {
@@ -107,60 +140,52 @@ const PaymentModal = ({ order, onComplete, onClose }) => {
     }
   };
 
+  // Submeter comprovativo (para casos onde já existe o pedido)
   const handleProofSubmit = async (proofData) => {
-    // Verificar se temos o paymentData
     if (!paymentData) {
       toast.error('Nenhum pagamento encontrado');
-      console.error('❌ paymentData é null/undefined');
       return;
     }
 
-    // Verificar se temos o payment id
     const paymentId = paymentData.payment?.id;
     if (!paymentId) {
       toast.error('ID do pagamento não encontrado');
-      console.error('❌ paymentId é null/undefined', paymentData);
       return;
     }
-
-    console.log('📤 Enviando comprovativo para paymentId:', paymentId);
 
     setLoading(true);
     try {
       let response;
       
-      // Se for FormData, enviar como multipart
       if (proofData instanceof FormData) {
-        // Adicionar o paymentId no FormData para debug
-        proofData.append('paymentId', paymentId);
-        
         response = await api.post(
           `/payments/${paymentId}/proof`,
           proofData,
-          {
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            },
-          }
+          { headers: { 'Content-Type': 'multipart/form-data' } }
         );
       } else {
-        // Envio normal (JSON)
         response = await api.post(`/payments/${paymentId}/proof`, proofData);
       }
       
       if (response.data.success) {
+        // Atualizar dados do pagamento
+        const updatedPayment = response.data.data;
+        
+        // ✅ Enviar para WhatsApp após 1.5 segundos
+        setTimeout(() => {
+          sendToWhatsApp(paymentData.order, updatedPayment);
+        }, 1500);
+        
         setShowConfirmation(true);
-        toast.success('Comprovativo enviado com sucesso! Aguarde verificação.');
         clearCart();
+        
         setTimeout(() => {
           onComplete && onComplete(paymentData.order);
-        }, 3000);
+        }, 4000);
       }
     } catch (error) {
-      console.error('❌ Erro ao enviar comprovativo:', error);
-      console.error('❌ Detalhes:', error.response?.data);
-      const errorMsg = error.response?.data?.error || 'Erro ao enviar comprovativo';
-      toast.error(errorMsg);
+      console.error('Erro ao enviar comprovativo:', error);
+      toast.error(error.response?.data?.error || 'Erro ao enviar comprovativo');
     } finally {
       setLoading(false);
     }
@@ -212,19 +237,25 @@ const PaymentModal = ({ order, onComplete, onClose }) => {
           padding: 'var(--spacing-xl) var(--spacing-lg)',
         }}
       >
-        <div style={{
-          width: '90px',
-          height: '90px',
-          borderRadius: '50%',
-          background: 'linear-gradient(135deg, #2e7d32, #4caf50)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          margin: '0 auto var(--spacing-lg)',
-          boxShadow: '0 8px 32px rgba(46, 125, 50, 0.3)',
-        }}>
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: 'spring', damping: 15, stiffness: 200, delay: 0.2 }}
+          style={{
+            width: '90px',
+            height: '90px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #2e7d32, #4caf50)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto var(--spacing-lg)',
+            boxShadow: '0 8px 32px rgba(46, 125, 50, 0.3)',
+          }}
+        >
           <CheckIcon style={{ fontSize: 48, color: 'white' }} />
-        </div>
+        </motion.div>
+        
         <h3 style={{ 
           fontSize: '1.4rem', 
           fontWeight: 700, 
@@ -233,15 +264,51 @@ const PaymentModal = ({ order, onComplete, onClose }) => {
         }}>
           Pedido Realizado! 🎉
         </h3>
+        
         <p style={{ 
           color: 'var(--text-secondary)', 
-          marginBottom: 'var(--spacing-sm)',
+          marginBottom: 'var(--spacing-md)',
           fontSize: '0.95rem',
         }}>
           {selectedMethod === 'in_person' 
             ? 'Seu pedido foi confirmado! Aguarde a preparação.'
             : 'Comprovativo enviado! Aguarde a verificação do pagamento.'}
         </p>
+
+        {/* Status do WhatsApp */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          style={{
+            padding: 'var(--spacing-md)',
+            background: whatsappSent 
+              ? 'linear-gradient(135deg, #25D36620, #128C7E20)'
+              : 'var(--glass-bg)',
+            borderRadius: 'var(--radius-md)',
+            marginBottom: 'var(--spacing-md)',
+            border: `1px solid ${whatsappSent ? '#25D366' : 'var(--border)'}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 'var(--spacing-sm)',
+          }}
+        >
+          <WhatsAppIcon style={{ 
+            color: whatsappSent ? '#25D366' : 'var(--text-secondary)',
+            fontSize: 24,
+          }} />
+          <p style={{ 
+            fontSize: '0.9rem',
+            fontWeight: 500,
+            color: whatsappSent ? '#25D366' : 'var(--text-secondary)',
+          }}>
+            {whatsappSent 
+              ? 'Pedido enviado para a cozinha via WhatsApp!' 
+              : 'Enviando para a cozinha...'}
+          </p>
+        </motion.div>
+
         <div style={{
           padding: 'var(--spacing-md)',
           background: 'linear-gradient(135deg, var(--glass-bg), var(--surface))',
@@ -260,6 +327,7 @@ const PaymentModal = ({ order, onComplete, onClose }) => {
             #{paymentData?.order?.order_number}
           </p>
         </div>
+
         <AnimatedButton
           variant="primary"
           onClick={() => {
@@ -294,15 +362,6 @@ const PaymentModal = ({ order, onComplete, onClose }) => {
           background: 'rgba(255,255,255,0.05)',
           borderRadius: '50%',
         }} />
-        <div style={{
-          position: 'absolute',
-          bottom: '-30px',
-          left: '-30px',
-          width: '80px',
-          height: '80px',
-          background: 'rgba(255,255,255,0.05)',
-          borderRadius: '50%',
-        }} />
         
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{
@@ -332,14 +391,31 @@ const PaymentModal = ({ order, onComplete, onClose }) => {
                     }).format(order.totalAmount)}
               </p>
             </div>
-             
+            <button
+              onClick={onClose}
+              style={{
+                background: 'rgba(255,255,255,0.15)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: '50%',
+                width: '36px',
+                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: 'white',
+                transition: 'all var(--transition-normal)',
+              }}
+            >
+              <CloseIcon style={{ fontSize: 20 }} />
+            </button>
           </div>
         </div>
       </div>
 
       {!selectedMethod ? (
         <>
-          {/* Resumo do pedido */}
           <div style={{
             display: 'flex',
             gap: 'var(--spacing-sm)',
@@ -495,7 +571,6 @@ const PaymentModal = ({ order, onComplete, onClose }) => {
 
           {renderPaymentMethodContent()}
 
-          {/* Resumo rápido */}
           <div style={{
             marginTop: 'var(--spacing-md)',
             padding: 'var(--spacing-sm) var(--spacing-md)',

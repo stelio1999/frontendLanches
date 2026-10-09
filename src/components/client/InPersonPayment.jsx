@@ -1,4 +1,4 @@
-// src/components/client/InPersonPayment.jsx//
+// src/components/client/InPersonPayment.jsx
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import AnimatedButton from '../common/AnimatedButton';
@@ -10,14 +10,18 @@ import {
 } from '@mui/icons-material';
 
 const InPersonPayment = ({ onSubmit, order, loading }) => {
-  const [confirmed, setConfirmed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = () => {
-    if (!confirmed) {
-      setConfirmed(true);
-      return;
+  // ✅ ÚNICO CLIQUE - faz tudo de uma vez
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      await onSubmit({});
+    } catch (error) {
+      console.error('Erro:', error);
+    } finally {
+      setSubmitting(false);
     }
-    onSubmit && onSubmit({});
   };
 
   return (
@@ -48,7 +52,7 @@ const InPersonPayment = ({ onSubmit, order, loading }) => {
             lineHeight: 1.6,
           }}>
             Esta opção não está disponível para entrega a domicílio.
-            Você deverá levantar o seu pedido no local.
+            Você deverá levantar o seu pedido no local. É obrigatório que o cliente esteja na loja.
           </p>
         </GlassCard>
 
@@ -129,36 +133,31 @@ const InPersonPayment = ({ onSubmit, order, loading }) => {
                   style: 'currency',
                   currency: 'MZN',
                   minimumFractionDigits: 0,
-                }).format(order.totalAmount + (order.deliveryFee || 0))}
+                }).format(order.totalAmount || 0)}
               </span>
             </div>
           </div>
 
+          {/* ✅ ÚNICO BOTÃO - 1 clique faz tudo */}
           <AnimatedButton
-            variant={confirmed ? 'success' : 'primary'}
+            variant="success"
             fullWidth
             onClick={handleSubmit}
-            loading={loading}
-            disabled={loading}
-            icon={confirmed ? <CheckIcon /> : <StoreIcon />}
+            loading={loading || submitting}
+            disabled={loading || submitting}
+            icon={<CheckIcon />}
           >
-            {confirmed ? 'Confirmar Pagamento' : 'Confirmar Retirada no Local'}
+            {submitting ? 'Processando...' : 'Confirmar Retirada no Local'}
           </AnimatedButton>
 
-          {confirmed && (
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              style={{
-                marginTop: 'var(--spacing-sm)',
-                fontSize: '0.85rem',
-                color: 'var(--text-secondary)',
-                textAlign: 'center',
-              }}
-            >
-              Clique em "Confirmar Pagamento" para finalizar seu pedido
-            </motion.p>
-          )}
+          <p style={{
+            marginTop: 'var(--spacing-sm)',
+            fontSize: '0.75rem',
+            color: 'var(--text-secondary)',
+            textAlign: 'center',
+          }}>
+            Ao confirmar, o pedido será enviado automaticamente para a cozinha
+          </p>
         </GlassCard>
       </motion.div>
     </div>

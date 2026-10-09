@@ -1,4 +1,4 @@
-// src/components/client/BankTransfer.jsx//
+// src/components/client/BankTransfer.jsx
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import AnimatedButton from '../common/AnimatedButton';
@@ -19,6 +19,7 @@ const BankTransfer = ({ onSubmit, onProofSubmit, order, paymentData, loading }) 
   const [proofText, setProofText] = useState('');
   const [proofImage, setProofImage] = useState(null);
   const [proofImagePreview, setProofImagePreview] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     fetchBanks();
@@ -35,7 +36,6 @@ const BankTransfer = ({ onSubmit, onProofSubmit, order, paymentData, loading }) 
       }
     } catch (error) {
       console.error('Error fetching banks:', error);
-      // Fallback data
       setBanks([
         { id: 'bim', bank: 'BIM', accountNumber: '1234567890', accountHolder: 'Delivery Food, Lda' },
         { id: 'bci', bank: 'BCI', accountNumber: '0987654321', accountHolder: 'Delivery Food, Lda' }
@@ -63,57 +63,65 @@ const BankTransfer = ({ onSubmit, onProofSubmit, order, paymentData, loading }) 
     }
   };
 
- // src/components/client/BankTransfer.jsx
-// Atualizar a função handleSubmit
-
-const handleSubmit = () => {
-  if (!selectedBank) {
-    toast.error('Selecione um banco');
-    return;
-  }
-
-  if (!proofText && !proofImage) {
-    toast.error('Envie o comprovativo (texto ou imagem)');
-    return;
-  }
-
-  console.log('📤 Enviando comprovativo - paymentData:', paymentData);
-
-  // Se estiver enviando comprovativo (já tem paymentData)
-  if (paymentData) {
-    const formData = new FormData();
-    
-    // Determinar o tipo de comprovativo
-    if (proofText) {
-      formData.append('proof', proofText);
-      formData.append('proofType', 'text');
-      console.log('📝 Enviando comprovativo de texto');
-    } else if (proofImage) {
-      // Se for imagem base64
-      if (proofImage.startsWith('data:image')) {
-        formData.append('proof', proofImage);
-        formData.append('proofType', 'image');
-        console.log('🖼️ Enviando imagem base64');
-      } else {
-        // Se for arquivo, enviar como file
-        formData.append('proofImage', proofImage);
-        formData.append('proofType', 'image');
-        console.log('🖼️ Enviando arquivo de imagem');
-      }
+  // ✅ ÚNICA FUNÇÃO: cria pedido + envia comprovativo + WhatsApp (se necessário)
+  const handleSubmit = async () => {
+    if (!selectedBank) {
+      toast.error('Selecione um banco');
+      return;
     }
-    
-    console.log('📤 FormData criado com successo');
-    onProofSubmit && onProofSubmit(formData);
-  } else {
-    // Criar novo pedido
-    console.log('📝 Criando novo pedido com pagamento');
-    onSubmit && onSubmit({
-      bankAccount: selectedBank,
-      proof: proofText || proofImage,
-      proofType: proofText ? 'text' : 'image'
-    });
-  }
-};
+
+    if (!proofText && !proofImage) {
+      toast.error('Envie o comprovativo (texto ou imagem)');
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      // Se ainda não tem pedido criado, cria primeiro
+      if (!paymentData) {
+        console.log('📝 Criando pedido...');
+        
+        // Passar dados do comprovativo junto com o pedido
+        const orderData = {
+          bankAccount: selectedBank,
+          proof: proofText || null,
+          proofImage: proofImage || null,
+          proofType: proofText ? 'text' : 'image'
+        };
+
+        // onSubmit vai criar o pedido E o comprovativo numa única chamada
+        await onSubmit(orderData);
+        
+        // Se retornar com sucesso, o PaymentModal vai mostrar a confirmação
+        // e disparar o WhatsApp
+      } else {
+        // Já tem pedido, só envia o comprovativo
+        console.log('📤 Enviando comprovativo para pedido existente...');
+        
+        const formData = new FormData();
+        if (proofText) {
+          formData.append('proof', proofText);
+          formData.append('proofType', 'text');
+        } else if (proofImage) {
+          if (proofImage.startsWith('data:image')) {
+            formData.append('proof', proofImage);
+            formData.append('proofType', 'image');
+          } else {
+            formData.append('proofImage', proofImage);
+            formData.append('proofType', 'image');
+          }
+        }
+        
+        await onProofSubmit(formData);
+      }
+    } catch (error) {
+      console.error('Erro ao submeter:', error);
+      toast.error('Erro ao processar pagamento');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const selectedBankData = banks.find(b => b.id === selectedBank);
 
@@ -181,7 +189,7 @@ const handleSubmit = () => {
                     style: 'currency',
                     currency: 'MZN',
                     minimumFractionDigits: 0,
-                  }).format(order.totalAmount + (order.deliveryFee || 0))}
+                  }).format(order.totalAmount || 0)}
                 </span>
               </div>
             </div>
@@ -249,10 +257,10 @@ const handleSubmit = () => {
                 transition: 'all var(--transition-normal)',
                 background: 'var(--glass-bg)',
               }}
-              onClick={() => document.getElementById('proofImageInput').click()}
+              onClick={() => document.getElementById('proofImageInputBank').click()}
               >
                 <input
-                  id="proofImageInput"
+                  id="proofImageInputBank"
                   type="file"
                   accept="image/*"
                   onChange={handleImageChange}
@@ -287,16 +295,26 @@ const handleSubmit = () => {
               </div>
             </div>
 
+            {/* ✅ ÚNICO BOTÃO - faz tudo de uma vez */}
             <AnimatedButton
               variant="primary"
               fullWidth
               onClick={handleSubmit}
-              loading={loading}
-              disabled={loading}
+              loading={loading || submitting}
+              disabled={loading || submitting || !selectedBank || (!proofText && !proofImage)}
               icon={<CheckIcon />}
             >
-              {paymentData ? 'Enviar Comprovativo' : 'Confirmar Pagamento'}
+              {submitting ? 'Processando...' : 'Confirmar Pagamento'}
             </AnimatedButton>
+            
+            <p style={{
+              marginTop: 'var(--spacing-sm)',
+              fontSize: '0.75rem',
+              color: 'var(--text-secondary)',
+              textAlign: 'center',
+            }}>
+              Ao confirmar, o pedido será enviado automaticamente para a cozinha
+            </p>
           </GlassCard>
         </motion.div>
       )}

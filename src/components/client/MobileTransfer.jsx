@@ -1,4 +1,4 @@
-// src/components/client/MobileTransfer.jsx//
+// src/components/client/MobileTransfer.jsx
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import AnimatedButton from '../common/AnimatedButton';
@@ -19,6 +19,7 @@ const MobileTransfer = ({ onSubmit, onProofSubmit, order, paymentData, loading }
   const [proofText, setProofText] = useState('');
   const [proofImage, setProofImage] = useState(null);
   const [proofImagePreview, setProofImagePreview] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     fetchWallets();
@@ -35,7 +36,6 @@ const MobileTransfer = ({ onSubmit, onProofSubmit, order, paymentData, loading }
       }
     } catch (error) {
       console.error('Error fetching wallets:', error);
-      // Fallback data
       setWallets([
         { id: 'mpesa', name: 'M-Pesa', number: '84 123 4567', accountHolder: 'Delivery Food, Lda' },
         { id: 'emola', name: 'E-Mola', number: '85 123 4567', accountHolder: 'Delivery Food, Lda' }
@@ -63,54 +63,58 @@ const MobileTransfer = ({ onSubmit, onProofSubmit, order, paymentData, loading }
     }
   };
 
-  
-  // src/components/client/MobileTransfer.jsx
-// Atualizar a função handleSubmit
-
-const handleSubmit = () => {
-  if (!selectedWallet) {
-    toast.error('Selecione uma carteira móvel');
-    return;
-  }
-
-  if (!proofText && !proofImage) {
-    toast.error('Envie o comprovativo (texto ou imagem)');
-    return;
-  }
-
-  console.log('📤 Enviando comprovativo - paymentData:', paymentData);
-
-  // Se estiver enviando comprovativo (já tem paymentData)
-  if (paymentData) {
-    const formData = new FormData();
-    
-    if (proofText) {
-      formData.append('proof', proofText);
-      formData.append('proofType', 'text');
-      console.log('📝 Enviando comprovativo de texto');
-    } else if (proofImage) {
-      if (proofImage.startsWith('data:image')) {
-        formData.append('proof', proofImage);
-        formData.append('proofType', 'image');
-        console.log('🖼️ Enviando imagem base64');
-      } else {
-        formData.append('proofImage', proofImage);
-        formData.append('proofType', 'image');
-        console.log('🖼️ Enviando arquivo de imagem');
-      }
+  // ✅ ÚNICA FUNÇÃO: cria pedido + envia comprovativo
+  const handleSubmit = async () => {
+    if (!selectedWallet) {
+      toast.error('Selecione uma carteira móvel');
+      return;
     }
-    
-    console.log('📤 FormData criado com successo');
-    onProofSubmit && onProofSubmit(formData);
-  } else {
-    console.log('📝 Criando novo pedido com pagamento');
-    onSubmit && onSubmit({
-      mobileWallet: selectedWallet,
-      proof: proofText || proofImage,
-      proofType: proofText ? 'text' : 'image'
-    });
-  }
-};
+
+    if (!proofText && !proofImage) {
+      toast.error('Envie o comprovativo (texto ou imagem)');
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      if (!paymentData) {
+        console.log('📝 Criando pedido...');
+        
+        const orderData = {
+          mobileWallet: selectedWallet,
+          proof: proofText || null,
+          proofImage: proofImage || null,
+          proofType: proofText ? 'text' : 'image'
+        };
+
+        await onSubmit(orderData);
+      } else {
+        console.log('📤 Enviando comprovativo para pedido existente...');
+        
+        const formData = new FormData();
+        if (proofText) {
+          formData.append('proof', proofText);
+          formData.append('proofType', 'text');
+        } else if (proofImage) {
+          if (proofImage.startsWith('data:image')) {
+            formData.append('proof', proofImage);
+            formData.append('proofType', 'image');
+          } else {
+            formData.append('proofImage', proofImage);
+            formData.append('proofType', 'image');
+          }
+        }
+        
+        await onProofSubmit(formData);
+      }
+    } catch (error) {
+      console.error('Erro ao submeter:', error);
+      toast.error('Erro ao processar pagamento');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const selectedWalletData = wallets.find(w => w.id === selectedWallet);
 
@@ -178,7 +182,7 @@ const handleSubmit = () => {
                     style: 'currency',
                     currency: 'MZN',
                     minimumFractionDigits: 0,
-                  }).format(order.totalAmount + (order.deliveryFee || 0))}
+                  }).format(order.totalAmount || 0)}
                 </span>
               </div>
             </div>
@@ -246,10 +250,10 @@ const handleSubmit = () => {
                 transition: 'all var(--transition-normal)',
                 background: 'var(--glass-bg)',
               }}
-              onClick={() => document.getElementById('proofImageInput').click()}
+              onClick={() => document.getElementById('proofImageInputMobile').click()}
               >
                 <input
-                  id="proofImageInput"
+                  id="proofImageInputMobile"
                   type="file"
                   accept="image/*"
                   onChange={handleImageChange}
@@ -284,16 +288,26 @@ const handleSubmit = () => {
               </div>
             </div>
 
+            {/* ✅ ÚNICO BOTÃO */}
             <AnimatedButton
               variant="primary"
               fullWidth
               onClick={handleSubmit}
-              loading={loading}
-              disabled={loading}
+              loading={loading || submitting}
+              disabled={loading || submitting || !selectedWallet || (!proofText && !proofImage)}
               icon={<CheckIcon />}
             >
-              {paymentData ? 'Enviar Comprovativo' : 'Confirmar Pagamento'}
+              {submitting ? 'Processando...' : 'Confirmar Pagamento'}
             </AnimatedButton>
+            
+            <p style={{
+              marginTop: 'var(--spacing-sm)',
+              fontSize: '0.75rem',
+              color: 'var(--text-secondary)',
+              textAlign: 'center',
+            }}>
+              Ao confirmar, o pedido será enviado automaticamente para a cozinha
+            </p>
           </GlassCard>
         </motion.div>
       )}
