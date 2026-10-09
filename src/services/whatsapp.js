@@ -2,7 +2,10 @@
 
 export class WhatsAppService {
   // Número do dono da cozinha (com código do país, sem +)
-  static KITCHEN_WHATSAPP = '258846967721'; // ← ALTERE AQUI para o número real
+  static KITCHEN_WHATSAPP = '258846967721'; // ← Número atualizado
+  
+  // URL da plataforma
+  static PLATFORM_URL = 'https://frontend-lanches.vercel.app';
   
   // Formatar preço
   static formatPrice(amount) {
@@ -112,7 +115,9 @@ export class WhatsAppService {
     
     message += '━━━━━━━━━━━━━━━━━━━━\n';
     message += '✅ Pedido enviado pelo sistema\n';
-    message += '🌐 Delivery Food - Moçambique';
+    message += '🌐 Delivery Food - Moçambique\n\n';
+    // ✅ Link da plataforma no final
+    message += `🔗 *Acesse a plataforma:*\n${this.PLATFORM_URL}`;
     
     return message;
   }
