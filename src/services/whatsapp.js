@@ -2,7 +2,7 @@
 
 export class WhatsAppService {
   // Número do dono da cozinha (com código do país, sem +)
-  static KITCHEN_WHATSAPP = '258841234567'; // ← ALTERE AQUI para o número real
+  static KITCHEN_WHATSAPP = '258846967721'; // ← ALTERE AQUI para o número real
   
   // Formatar preço
   static formatPrice(amount) {
